@@ -2,6 +2,7 @@ const express = require('express');
 const users = require('./users')
 const usermodel = require('./usermodel');
 const UserModel2 = require('./usermodel2');
+const {generatepass,validatepass} = require ('./passwordencrypt')
 
 
 const router = express.Router();
@@ -37,7 +38,9 @@ router.post("/login", async (request,response) => {
     let responseData = await usermodel.findOne({username})
     console.log(responseData);
     if(responseData){
-        if(password === responseData.password){
+        console.log(responseData.hash)
+        const isValid = validatepass(password, responseData.hash, responseData.salt)
+        if(isValid){
             response.status(200).send({success:"true", message:"Successful"})
         } else {
             response.status(400).send({failure:"true", message:"wrong username or password"})
@@ -57,10 +60,14 @@ router.post("/login", async (request,response) => {
 
 
 router.post('/signup', async (request,response) => {
-    const { username, email,password, confirmpassword } = request.body
+    const { username, email,password, } = request.body
     console.log(username)
+    const saltHash = generatepass(password)
 
-    let userModel = new usermodel({username, email, password, confirmpassword})
+    const salt = saltHash.salt
+    const hash = saltHash.hash
+
+    let userModel = new usermodel({username,password, email, salt, hash})
 
     let responseData =  await userModel.save()
     console.log(responseData)
